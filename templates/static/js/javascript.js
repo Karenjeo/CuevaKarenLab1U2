@@ -1,3 +1,4 @@
+//Global variables
 var canvasWidth = 700;
 var canvasHeight = 600;
 var canvas = document.getElementById("canvas");
@@ -6,15 +7,12 @@ var ctx = canvas.getContext('2d');
 var card = document.getElementById("card");
 var cardScore = document.getElementById("card-score");
 
-//Global variables
-
 //SFX
 let scoreSFX = new Audio("https://archive.org/download/classiccoin/classiccoin.wav");
 let gameOverSFX = new Audio("https://archive.org/download/smb_gameover/smb_gameover.wav");
 let jumpSFX = new Audio("https://archive.org/download/jump_20210424/jump.wav");
 
 //Global Functions
-
 var player = null;
 var score = 0;
 //Used to see if user has scored another 10 points or not
@@ -26,7 +24,7 @@ var enemySpeed = 5;
 var canScore = true;
 //Used for 'setInterval'
 var presetTime = 1000;
-
+//Creacion del bloque principal
 function startGame() {
     player = new Player(50,565,35,"black");
     arrayBlocks = [];
@@ -36,7 +34,7 @@ function startGame() {
     canScore = true;
     presetTime = 1000;
 }
-
+//funcion de numero aleatorio
 function getRandomNumber(min,max){
     return Math.floor(Math.random() * (max - min + 1) ) + min;
 }
@@ -64,7 +62,7 @@ function isPastBlock(player, block){
         player.x + (player.size / 2) < block.x + (block.size / 4) * 3
     )
 }
-
+//clase player
 class Player {
     constructor(x,y,size,color){
         this.x = x;
@@ -112,8 +110,7 @@ class Player {
             }
         }    
     }
-    
-
+    // rotacion del bloque principal
     rotation() {
         let offsetXPosition = this.x + (this.size / 2);
         let offsetYPosition = this.y + (this.size / 2);
@@ -136,9 +133,8 @@ class Player {
     }
 
 }
-
+// Creacion de los bloques jugadores
 class AvoidBlock {
-    
     constructor(size, speed){
         this.x = canvas.width + size;
         this.y = 600 - size;
@@ -153,7 +149,6 @@ class AvoidBlock {
         ctx.fillRect(this.x,this.y,this.size,this.size);
     }
     
-
     slide() {
         this.draw();
         this.x -= this.slideSpeed;
@@ -163,15 +158,13 @@ class AvoidBlock {
 
 //Auto generate blocks
 function generateBlocks() {
-
-
     let timeDelay = randomInterval(presetTime);
     arrayBlocks.push(new AvoidBlock(50, enemySpeed));
 
 
     setTimeout(generateBlocks, timeDelay);
 }
-
+//tiempo para salir de los bloques jugadores
 function randomInterval(timeInterval) {
     let returnTime = timeInterval;
     if(Math.random() < 0.5){
@@ -181,7 +174,7 @@ function randomInterval(timeInterval) {
     }
     return returnTime;
 }
-
+//funcion de la linea de fondo
 function drawBackgroundLine() {
     ctx.beginPath();
     ctx.moveTo(0,650);
@@ -190,7 +183,7 @@ function drawBackgroundLine() {
     ctx.strokeStyle = "black";
     ctx.stroke();
 }
-
+//diseño del las letras donde se muestra el puntaje
 function drawScore() {
     ctx.font = "30px Marker Felt";
     ctx.fillStyle = "black";
@@ -212,8 +205,7 @@ function shouldIncreaseSpeed() {
             console.log("Speed increased");
         }
 }
-
-
+//velocidad del juego
 var animationId = null;
 function animate() {
     animationId = requestAnimationFrame(animate);

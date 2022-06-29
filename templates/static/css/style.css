@@ -1,8 +1,10 @@
-* {
+
+/* tipo de letra de toda la página*/
+*{
     box-sizing: border-box;
     font-family: Georgia, 'Times New Roman', Times, serif, Helvetica, sans-serif;
   }
-  
+  /**/
   #body {
     color: rgb(183, 241, 222);
     height: 85vh;
@@ -14,18 +16,20 @@
     align-items: center;
     margin: 0;
   }
+    /*borde el cuadro del juego*/
   canvas {
     border:2px solid black;
   } 
-  
+    /*tipo de letra*/
   h4{
     font-family: Georgia, 'Times New Roman', Times, serif, 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   }
+    /*fondo del cuadro del juego*/
   #canvas {
     border-radius: 10px;
     background-color: #ecdf96cb;
   }
-  
+    /*Ubicacion del cuadro de juego*/
   #overlay {
     position: absolute;
     top: 0;
@@ -53,7 +57,7 @@
     margin-top: 10px;
     user-select: none;
   }
-  
+    /*Diseño del boton de reinicio del juego*/
   #overlay #card > button {
     outline: none;
     color: rgb(0, 0, 0);
