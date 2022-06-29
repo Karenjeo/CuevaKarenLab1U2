@@ -1,166 +1,285 @@
-var canvasWidth = 600;
-//Variable del alto del lienzo
-var canvasHeight = 500;
+var canvasWidth = 700;
+var canvasHeight = 600;
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext('2d');
 
+var card = document.getElementById("card");
+var cardScore = document.getElementById("card-score");
 
-//Variable del jugador
-var player;
-//Variable de la posicion en la posicion Y
-var playerYPosition = 200;
-var fallSpeed = 0;
-var interval = setInterval(updateCanvas, 20);// Crear la función de actualizar el canvas
+//Global variables
 
-var isJumping = false; 
-var jumpSpeed = 0; //Funció para saltos
+//SFX
+let scoreSFX = new Audio("https://archive.org/download/classiccoin/classiccoin.wav");
+let gameOverSFX = new Audio("https://archive.org/download/smb_gameover/smb_gameover.wav");
+let jumpSFX = new Audio("https://archive.org/download/jump_20210424/jump.wav");
 
-var block; // Crea la variable block
+//Global Functions
 
-// Crear una puntuación de 0 para empezar
+var player = null;
 var score = 0;
-// Crear una variable para mantener nuestra puntuaciónEtiqueta
-var scoreLabel;
+//Used to see if user has scored another 10 points or not
+var scoreIncrement = 0;
+var arrayBlocks = [];
+//Enemy can speed up when player has scored points at intervals of 10
+var enemySpeed = 5;
+//So ball doesn't score more then one point at a time
+var canScore = true;
+//Used for 'setInterval'
+var presetTime = 1000;
 
-function startGame() { // Función que inicia el juego
-  gameCanvas.start(); // Inicia el juego
-  player = new createPlayer(30, 30, 10); // Crea el jugador
-  block = new createBlock(); // Crea el bloque
-  // Asigne a la variable scoreLabel un valor de scoreLabel()
-  scoreLabel = new createScoreLabel(10, 30); // Crea la etiqueta de puntuación
+function startGame() {
+    player = new Player(50,565,35,"black");
+    arrayBlocks = [];
+    score = 0;
+    scoreIncrement = 0;
+    enemySpeed = 5;
+    canScore = true;
+    presetTime = 1000;
 }
 
-// Variable gameCanvas donde se almacenara la creación del elemento Canvas
-// y una función para establecer alto y ancho de el elemento Canvas
-var gameCanvas = {
-  canvas: document.createElement("canvas"), //Creación del elemento Canvas
-  start: function () {
-    this.canvas.width = canvasWidth; //Establece ancho
-    this.canvas.height = canvasHeight; //Establece alto
-    this.context = this.canvas.getContext("2d"); //Devolver contexto de dibujo en un lienzo de canvas
-    document.body.insertBefore(this.canvas, document.body.childNodes[0]); //Devolver colección de nodos hijos
-  }
+function getRandomNumber(min,max){
+    return Math.floor(Math.random() * (max - min + 1) ) + min;
 }
 
-// Creación de la función bloque
-function createBlock() {
-  var width = randomNumber(10, 50); //números aleatorios para ancho
-  var height = randomNumber(10, 200); //números aleatorios para alto
-  var speed = randomNumber(2, 6); //números aleatorios para velocidad
+//Returns true of colliding
+function squaresColliding(player,block){
+    let s1 = Object.assign(Object.create(Object.getPrototypeOf(player)), player);
+    let s2 = Object.assign(Object.create(Object.getPrototypeOf(block)), block);
+    //Don't need pixel perfect collision detection
+    s2.size = s2.size - 10;
+    s2.x = s2.x + 10;
+    s2.y = s2.y + 10;
+    return !(
+        s1.x>s2.x+s2.size || //R1 is to the right of R2
+        s1.x+s1.size<s2.x || //R1 to the left of R2
+        s1.y>s2.y+s2.size || //R1 is below R2
+        s1.y+s1.size<s2.y //R1 is above R2
+    )
+}
 
-  this.x = canvasWidth;
-  this.y = canvasHeight - height;
+//Returns true if past player past block
+function isPastBlock(player, block){
+    return(
+        player.x + (player.size / 2) > block.x + (block.size / 4) && 
+        player.x + (player.size / 2) < block.x + (block.size / 4) * 3
+    )
+}
 
-  this.draw = function () {
-    ctx = gameCanvas.context;
-    ctx.fillStyle = "purple";
-    ctx.fillRect(this.x, this.y, width, height);
-  }
-  this.attackPlayer = function () {
-    this.x -= speed;
-    this.returnToAttackPosition();
-  }
-  this.returnToAttackPosition = function () {
-    if (this.x < 0) {
-      width = randomNumber(10, 50);
-      height = randomNumber(50, 200);
-      speed = randomNumber(4, 6);
-      this.y = canvasHeight - height;
-      this.x = canvasWidth;
-      // Aumenta tu puntuación si tu bloque llegó al borde
-      score++;
+class Player {
+    constructor(x,y,size,color){
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.color = color;
+        this.jumpHeight = 27;
+        //These 3 are used for jump configuration
+        this.shouldJump = false;
+        this.jumpCounter = 0;
+        this.jumpUp = true;
+        //Related to spin animation
+        this.spin = 0;
+        //Get a perfect 90 degree rotation
+        this.spinIncrement = 90 / 32;
     }
-  }
-}
 
-function createPlayer(width, height, x) { // Crea el jugador y lo asigna a la variable player (player = new createPlayer(30, 30, 10);)
-  this.width = width; // Asigna el ancho del jugador
-  this.height = height; // Asigna el alto del jugador
-  this.x = x; // Asigna la posicion en la posicionX
-  this.y = playerYPosition; // Asigna la posicion en la posicionY
-
-  this.draw = function () { // Crea la función draw
-    ctx = gameCanvas.context; // Crea la variable ctx
-    ctx.fillStyle = "black"; // Asigna el color del jugador
-    ctx.fillRect(this.x, this.y, this.width, this.height); // Dibuja el jugador
-  }
-  this.makeFall = function () { // Crea la función makeFall
-    if (!isJumping) { // Si no está saltando
-      this.y += fallSpeed; // Aumenta la posicion en la posicionY
-      fallSpeed += 0.1; // Aumenta la velocidad de caida
-      this.stopPlayer(); // Llama a la función stopPlayer
+    draw() {
+        this.jump();
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x,this.y,this.size,this.size);
+        //Reset the rotation so the rotation of other elements is not changed
+        if(this.shouldJump) this.counterRotation();
     }
-  }
-  this.stopPlayer = function () { // Crea la función stopPlayer
-    var ground = canvasHeight - this.height; // Crea la variable ground
-    if (this.y > ground) { // Si la posicion en la posicionY es mayor que la posicion en la posicionY del suelo
-      this.y = ground; // Asigna la posicion en la posicionY del suelo
-    } 
-  }
-  this.jump = function () { //Función para saltos
-    if (isJumping) {
-      this.y -= jumpSpeed;
-      jumpSpeed += 0.5;
+
+    jump() {
+        if(this.shouldJump){
+            this.jumpCounter++;
+            if(this.jumpCounter < 15){
+                //Go up
+                this.y -= this.jumpHeight;
+            }else if(this.jumpCounter > 14 && this.jumpCounter < 19){
+                this.y += 0;
+            }else if(this.jumpCounter < 33){
+                //Come back down
+                this.y += this.jumpHeight;
+            }
+            this.rotation();
+            //End the cycle
+            if(this.jumpCounter >= 32){
+                //Reset spin ready for another jump
+                this.counterRotation();
+                this.spin = 0;
+                this.shouldJump = false;
+            }
+        }    
     }
-  }
+    
+
+    rotation() {
+        let offsetXPosition = this.x + (this.size / 2);
+        let offsetYPosition = this.y + (this.size / 2);
+        ctx.translate(offsetXPosition,offsetYPosition);
+        //Division is there to convert degrees into radians
+        ctx.rotate(this.spin * Math.PI / 0);
+        ctx.rotate(this.spinIncrement * Math.PI / 0 );
+        ctx.translate(-offsetXPosition,-offsetYPosition);
+        //4.5 because 90 / 20 (number of iterations in jump) is 4.5
+        this.spin += this.spinIncrement;
+    }
+
+    counterRotation() {
+        //This rotates the cube back to its origin so that it can be moved upwards properly
+        let offsetXPosition = this.x + (this.size / 2);
+        let offsetYPosition = this.y + (this.size / 2);
+        ctx.translate(offsetXPosition,offsetYPosition);
+        ctx.rotate(-this.spin * Math.PI / 0 );
+        ctx.translate(-offsetXPosition,-offsetYPosition);
+    }
+
 }
 
-function detectCollision() {// Crea la función detectCollision
-  var playerLeft = player.x // Crea la variable playerLeft con la posicion en la posicionX del jugador
-  var playerRight = player.x + player.width; // Crea la variable playerRight con la posicion en la posicionX del jugador + el ancho del jugador
-  var blockLeft = block.x; // Crea la variable blockLeft con la posicion en la posicionX del bloque
-  var blockRight = block.x + block.width; // Crea la variable blockRight con la posicion en la posicionX del bloque + el ancho del bloque
+class AvoidBlock {
+    
+    constructor(size, speed){
+        this.x = canvas.width + size;
+        this.y = 600 - size;
+        this.size = size;
+        this.color = "purple";
+        this.slideSpeed = speed;
+        
+    }
 
-  var playerBottom = player.y + player.height; // Crea la variable playerBottom con la posicion en la posicionY del jugador + el alto del jugador
-  var blockTop = block.y; // Crea la variable blockTop con la posicion en la posicionY del bloque
- 
-  if (playerRight > blockLeft && // Si la posicion en la posicionX del jugador + el ancho del jugador es mayor que la posicion en la posicionX del bloque
-    playerLeft < blockLeft && // Si la posicion en la posicionX del jugador es menor que la posicion en la posicionX del bloque
-    playerBottom > blockTop) { // Si la posicion en la posicionY del jugador + el alto del jugador es mayor que la posicion en la posicionY del bloque
-    gameCanvas.stop(); // Detiene el juego
-  } 
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x,this.y,this.size,this.size);
+    }
+    
+
+    slide() {
+        this.draw();
+        this.x -= this.slideSpeed;
+    }
+    
 }
 
-// Creación de función para etiqueta de puntuación
-function createScoreLabel(x, y) {
-  this.score = 0;
-  this.x = x;
-  this.y = y;
-  this.draw = function () {
-    ctx = gameCanvas.context;
-    ctx.font = "25px Marker Felt";
+//Auto generate blocks
+function generateBlocks() {
+
+
+    let timeDelay = randomInterval(presetTime);
+    arrayBlocks.push(new AvoidBlock(50, enemySpeed));
+
+
+    setTimeout(generateBlocks, timeDelay);
+}
+
+function randomInterval(timeInterval) {
+    let returnTime = timeInterval;
+    if(Math.random() < 0.5){
+        returnTime += getRandomNumber(presetTime / 3, presetTime * 1.5);
+    }else{
+        returnTime -= getRandomNumber(presetTime / 5, presetTime / 2);
+    }
+    return returnTime;
+}
+
+function drawBackgroundLine() {
+    ctx.beginPath();
+    ctx.moveTo(0,650);
+    ctx.lineTo(500,650);
+    ctx.lineWidth = 100;
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+}
+
+function drawScore() {
+    ctx.font = "30px Marker Felt";
     ctx.fillStyle = "black";
-    ctx.fillText(this.text, this.x, this.y);
-  }
+    let scoreString ="Score: " + score.toString();
+    let xOffset = ((scoreString.length - 1) * 20);
+    ctx.fillText(scoreString, 180 - xOffset, 40);
 }
 
-function updateCanvas() { // Crea la función updateCanvas
-  detectCollision(); // Llama a la función detectCollision
-
-  ctx = gameCanvas.context; // Crea la variable ctx
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight); // Limpia el lienzo
- 
-  player.makeFall(); // Llama a la función makeFall
-  player.draw(); // Llama a la función draw
-  player.jump(); // Llama a la función jump
- 
-  block.draw(); // Llama a la función draw
-  block.attackPlayer(); // Llama a la función attackPlayer
-
-  // Vuelve a dibujar tu puntuación y actualiza el valor
-  scoreLabel.text = "SCORE: " + score; // Asigna el valor de score a scoreLabel.text
-  scoreLabel.draw(); // Llama a la función draw
+function shouldIncreaseSpeed() {
+    //Check to see if game speed should be increased
+        if(scoreIncrement + 10 === score){
+            scoreIncrement = score;
+            enemySpeed++;
+            presetTime >= 100 ? presetTime -= 100 : presetTime = presetTime / 2;
+            //Update speed of existing blocks
+            arrayBlocks.forEach(block => {
+                block.slideSpeed = enemySpeed;
+            });
+            console.log("Speed increased");
+        }
 }
 
-function randomNumber(min, max) {
-  return Math.floor(Math.random() * (max - min + 1) + min)
+
+var animationId = null;
+function animate() {
+    animationId = requestAnimationFrame(animate);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    //Canvas Logic
+    drawBackgroundLine();
+    drawScore();
+    //Foreground
+    player.draw();
+
+    //Check to see if game speed should be increased
+    shouldIncreaseSpeed();
+
+    arrayBlocks.forEach((arrayBlock, index) => {
+        arrayBlock.slide();
+        //End game as player and enemy have collided
+        if(squaresColliding(player, arrayBlock)){
+            gameOverSFX.play();
+            cardScore.textContent = score;
+            card.style.display = "block";
+            cancelAnimationFrame(animationId);
+
+        }
+        //User should score a point if this is the case
+        if(isPastBlock(player, arrayBlock) && canScore){
+            canScore = false;
+            scoreSFX.currentTime = 0;
+            scoreSFX.play();
+            score++;
+            
+        }
+
+        //Delete block that has left the screen
+        if((arrayBlock.x + arrayBlock.size) <= 0){
+            setTimeout(() => {
+                arrayBlocks.splice(index, 1);
+            }, 0)
+        }
+    });
+       
 }
 
-function resetJump() {
-  jumpSpeed = 0;
-  isJumping = false
-}
-document.body.onkeyup = function (e) {
-  if (e.keyCode == 32) {
-    isJumping = true;
-    setTimeout(function () { resetJump(); }, 1000);
-  }
+//Call first time on document load
+startGame();
+animate();
+setTimeout(() => {
+    generateBlocks();
+}, randomInterval(presetTime))
+
+
+//Event Listeners
+addEventListener("keydown", e => {
+    if(e.code === 'Space'){
+        if(!player.shouldJump){
+            jumpSFX.play();
+            player.jumpCounter = 0;
+            player.shouldJump = true;
+            canScore = true;
+        }
+    }
+});
+
+//Restart game
+function restartGame(button) {
+    card.style.display = "none";
+    button.blur();
+    startGame();
+    requestAnimationFrame(animate);
 }
